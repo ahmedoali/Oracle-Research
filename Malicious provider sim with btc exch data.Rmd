@@ -9,6 +9,10 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Aim
+The aim here is to understand how the MAD (Median absolute deviance) can increase as we have more malicious feed providers attack the system. This will help in narrowing down a set of criteria to develop an algorithm which can stop itself from accepting new values while the the average exchange is deviating significantly from the median.
+
+
 ## Bitcoin - Good providers
 
 Bitcoin data comprises of hourly input data by 26 exchanges from the dates 20/10/2021 to 22/10/2021. The exchanges are:
