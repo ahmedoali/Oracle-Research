@@ -1,0 +1,177 @@
+---
+title: "Malicious provider simulation with bitcoin exchange data"
+author: "Ahmed Ali"
+date: "5 November 2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Bitcoin - Good providers
+
+Bitcoin data comprises of hourly input data by 26 exchanges from the dates 20/10/2021 to 22/10/2021. The exchanges are:
+
+```{r,echo=FALSE}
+library(readxl)
+exchange_data <- read_excel("exchange_data.xlsx")
+colnames(exchange_data[,c(5:ncol(exchange_data))])
+```
+
+We calculate Median Absolute deviance (MAD) of inputs for each time point and plot the density plot to observe the distribution of the MAD.
+
+```{r,echo=FALSE}
+exchange_data$median_ex <- apply(exchange_data[,c(5:30)],1,median)
+exchange_data$mad_ex <- apply(exchange_data[,c(5:30)],1,mad)
+
+
+hist(na.omit(exchange_data$mad_ex),freq = FALSE,xlab = "MAD of Input data",main = "")
+# Calculate density
+dx <- density(na.omit(exchange_data$mad_ex))
+# Add density
+lines(dx, lwd = 2, col = "red")
+
+```
+
+We observe the data is right skewed with larger values of MAD less likely to occur. Below we can see the summary statistics of the MAD’s and the median MAD is small relative to the prices of bitcoin proposed.
+
+```{r,echo=FALSE}
+summary(exchange_data$mad_ex)
+```
+
+
+
+## Bitcoin - 10% Malicious providers
+
+What does the distribution look like if three of providers are malicious? For the first 3 providers in the data, we will add a simulated value from the uniform distribution between 1000 and 5000 - all values equally likely to happen and added to the current values provided by the exchanges.
+
+```{r,echo=FALSE}
+set.seed(123)
+exchange_data10 <- exchange_data
+for(i in 1:nrow(exchange_data10)){
+for(j in 5:7){
+  exchange_data10[i,j] = exchange_data10[i,j] + runif(1,-5000,5000) 
+  
+}
+}
+
+exchange_data10$median_ex <- apply(exchange_data10[,c(5:30)],1,median)
+exchange_data10$mad_ex <- apply(exchange_data10[,c(5:30)],1,mad)
+
+
+hist(na.omit(exchange_data10$mad_ex),freq = FALSE,xlab = "MAD of Input data",main = "")
+# Calculate density
+dx <- density(na.omit(exchange_data10$mad_ex))
+# Add density
+lines(dx, lwd = 2, col = "red")
+
+
+```
+
+The distribution is pretty similar in terms of the shape but it seems that average exchanges absolute deviation from the median has shifted to the right. The MADs are still robust at this stage
+
+```{r, echo=FALSE}
+summary(exchange_data10$mad_ex)
+```
+
+
+## Bitcoin - 25% Malicious providers
+
+What would the spread of the MAD values look like if we have 25% of the providers as malicious? As before - we simulate values from a uniform distribution and add them to the values of the exchanges. In this scenario we have 7 malicious providers.
+
+```{r,echo=FALSE}
+set.seed(123)
+exchange_data25 <- exchange_data
+for(i in 1:nrow(exchange_data25)){
+for(j in 5:11){
+  exchange_data25[i,j] = exchange_data25[i,j] + runif(1,-5000,5000) 
+  
+}
+}
+
+exchange_data25$median_ex <- apply(exchange_data25[,c(5:30)],1,median)
+exchange_data25$mad_ex <- apply(exchange_data25[,c(5:30)],1,mad)
+
+hist(na.omit(exchange_data25$mad_ex),freq = FALSE,xlab = "MAD of Input data",main = "")
+# Calculate density
+dx <- density(na.omit(exchange_data25$mad_ex))
+# Add density
+lines(dx, lwd = 2, col = "red")
+
+```
+
+
+We now see a bigger impact on the distribution of the MADs with the median further shifted to the right.
+
+
+```{r,echo=FALSE}
+summary(exchange_data25$mad_ex)
+```
+
+
+## Bitcoin - 50% Malicious providers
+
+What would the spread of the MAD values look like if we have 50% of the providers as malicious? As before - we simulate values from a uniform distribution and add them to the values of the exchanges. In this scenario we have 13 malicious providers.
+
+```{r,echo=FALSE}
+set.seed(123)
+exchange_data50 <- exchange_data
+for(i in 1:nrow(exchange_data50)){
+for(j in 5:17){
+  exchange_data50[i,j] = exchange_data50[i,j] + runif(1,-5000,5000) 
+  
+}
+}
+
+exchange_data50$median_ex <- apply(exchange_data50[,c(5:30)],1,median)
+exchange_data50$mad_ex <- apply(exchange_data50[,c(5:30)],1,mad)
+
+hist(na.omit(exchange_data50$mad_ex),freq = FALSE,xlab = "MAD of Input data",main = "")
+# Calculate density
+dx <- density(na.omit(exchange_data50$mad_ex))
+# Add density
+lines(dx, lwd = 2, col = "red")
+
+```
+
+At 50% malicious providers - the effect is clear to see. More extremely large MAD values are now part of the distribution and the median has shifted significantly to the right. This is intuitive since half of the data is now considered malicious.
+
+```{r,echo=FALSE}
+summary(exchange_data50$mad_ex)
+```
+
+
+## Bitcoin - 90% Malicious providers
+
+We now attempt to modify 23 providers into malicious providers. 
+
+```{r,echo=FALSE}
+set.seed(123)
+exchange_data90 <- exchange_data
+for(i in 1:nrow(exchange_data90)){
+for(j in 5:27){
+  exchange_data90[i,j] = exchange_data90[i,j] + runif(1,-5000,5000) 
+  
+}
+}
+
+exchange_data90$median_ex <- apply(exchange_data90[,c(5:30)],1,median)
+exchange_data90$mad_ex <- apply(exchange_data90[,c(5:30)],1,mad)
+
+hist(na.omit(exchange_data90$mad_ex),freq = FALSE,xlab = "MAD of Input data",main = "")
+# Calculate density
+dx <- density(na.omit(exchange_data90$mad_ex))
+# Add density
+lines(dx, lwd = 2, col = "red")
+
+```
+
+Here the effect is even more defined, we see a rough median of 3000 with a large range of possible values.
+
+```{r,echo=FALSE}
+summary(exchange_data90$mad_ex)
+```
+
+
+
