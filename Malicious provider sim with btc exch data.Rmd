@@ -10,7 +10,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Aim
-The aim here is to understand how the MAD (Median absolute deviance) can increase as we have more malicious feed providers attack the system. This will help in narrowing down a set of criteria to develop an algorithm which can stop itself from accepting new values while the the average exchange is deviating significantly from the median.
+The aim here is to understand how the MAD (Median absolute deviance) can increase as we have more malicious feed providers attack the system. This will help in
+narrowing down a set of criteria to develop an algorithm which can stop itself from accepting new values while the the average exchange 
+is deviating significantly from the median.
 
 
 ## Bitcoin - Good providers
@@ -38,7 +40,8 @@ lines(dx, lwd = 2, col = "red")
 
 ```
 
-We observe the data is right skewed with larger values of MAD less likely to occur. Below we can see the summary statistics of the MAD’s and the median MAD is small relative to the prices of bitcoin proposed.
+We observe the data is right skewed with larger values of MAD less likely to occur. Below we can see the summary statistics of the MAD’s and the median MAD is
+small relative to the prices of bitcoin proposed.
 
 ```{r,echo=FALSE}
 summary(exchange_data$mad_ex)
@@ -48,7 +51,8 @@ summary(exchange_data$mad_ex)
 
 ## Bitcoin - 10% Malicious providers
 
-What does the distribution look like if three of providers are malicious? For the first 3 providers in the data, we will add a simulated value from the uniform distribution between 1000 and 5000 - all values equally likely to happen and added to the current values provided by the exchanges.
+What does the distribution look like if three of providers are malicious? For the first 3 providers in the data, we will add a simulated value from the 
+uniform distribution between 1000 and 5000 - all values equally likely to happen and added to the current values provided by the exchanges.
 
 ```{r,echo=FALSE}
 set.seed(123)
@@ -73,7 +77,8 @@ lines(dx, lwd = 2, col = "red")
 
 ```
 
-The distribution is pretty similar in terms of the shape but it seems that average exchanges absolute deviation from the median has shifted to the right. The MADs are still robust at this stage
+The distribution is pretty similar in terms of the shape but it seems that average exchanges absolute deviation from the median has shifted to the right.
+The MADs are still robust at this stage
 
 ```{r, echo=FALSE}
 summary(exchange_data10$mad_ex)
@@ -82,7 +87,8 @@ summary(exchange_data10$mad_ex)
 
 ## Bitcoin - 25% Malicious providers
 
-What would the spread of the MAD values look like if we have 25% of the providers as malicious? As before - we simulate values from a uniform distribution and add them to the values of the exchanges. In this scenario we have 7 malicious providers.
+What would the spread of the MAD values look like if we have 25% of the providers as malicious? As before - we simulate values from a uniform distribution 
+and add them to the values of the exchanges. In this scenario we have 7 malicious providers.
 
 ```{r,echo=FALSE}
 set.seed(123)
@@ -116,7 +122,8 @@ summary(exchange_data25$mad_ex)
 
 ## Bitcoin - 50% Malicious providers
 
-What would the spread of the MAD values look like if we have 50% of the providers as malicious? As before - we simulate values from a uniform distribution and add them to the values of the exchanges. In this scenario we have 13 malicious providers.
+What would the spread of the MAD values look like if we have 50% of the providers as malicious? As before - we simulate values from a uniform distribution
+and add them to the values of the exchanges. In this scenario we have 13 malicious providers.
 
 ```{r,echo=FALSE}
 set.seed(123)
@@ -139,7 +146,8 @@ lines(dx, lwd = 2, col = "red")
 
 ```
 
-At 50% malicious providers - the effect is clear to see. More extremely large MAD values are now part of the distribution and the median has shifted significantly to the right. This is intuitive since half of the data is now considered malicious.
+At 50% malicious providers - the effect is clear to see. More extremely large MAD values are now part of the distribution and the median has shifted 
+significantly to the right. This is intuitive since half of the data is now considered malicious.
 
 ```{r,echo=FALSE}
 summary(exchange_data50$mad_ex)
