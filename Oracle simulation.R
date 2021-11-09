@@ -15,7 +15,7 @@
 
 rm(list = ls())
 
-N = 5 # Number of inputs for each exchange
+N <- 5 # Number of inputs for each exchange
 N_feeds <- 10 # Number of feed providers, can simulate random number of feeds if needed
 deposits <- runif(N_feeds,1000,30000) # Simulating initial deposits for each feed provider
 results <- list() # Final results will be stored in a list
