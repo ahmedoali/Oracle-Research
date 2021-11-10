@@ -27,7 +27,7 @@ mean(bstraps)
 sd(bstraps)
 sort(bstraps)[c(250,9750)]
 
-# Plot raw MAD data, bootstrapped MAD data and a simulated values
+# Plot raw MAD data, bootstrapped MAD data and simulated values
 # from the lognormal distribution
 par(mfrow = c(2,2))
 hist(bstraps, freq = FALSE, main = "Distribution of bootstrapped MAD")
