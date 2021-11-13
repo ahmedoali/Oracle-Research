@@ -25,11 +25,9 @@ dat <- as.matrix(exchange_data[,c(5:30)])
 #
 #
 
-# Test 1 - anything above 0.15% indicates malicious providers and
-# not a result of market inefficiency. Between 0.08% and 0.15% could
-# be due to market inefficiency.
-
+# Test 1
 apply(dat,1,summary)
+apply(dat,1,mad)
 
 apply(dat,1,function(x) round(100*((max(x)/min(x))-1),2))
 apply(dat,1,function(x) round(100*((max(x)/quantile(x,0.75))-1),2))
@@ -74,6 +72,8 @@ s_skew
 s_kur
 c_rskew
 
+orig <- dat
+
 
 # Example -----------------------------------------------------------------
 
@@ -83,15 +83,16 @@ M <- nrow(dat)
 p <- 0.6
 for(i in 1:M){
   rows <- i
-  for(j in 1:floor(p*N)){
-    cols <- sample(1:N,floor(p*N),replace = TRUE)
-    dat[i,cols] <- runif(1, min = -1500, max = 1500) + dat[i,cols]
+  cols <- sample(1:N,floor(p*N),replace = TRUE)
+  for(j in 1:length(cols)){
+    dat[i,cols] <- runif(1, min = -5000, max = 5000) + dat[i,cols]
   }
 }
 
 
 # Test 1
 apply(dat,1,summary)
+apply(dat,1,mad)
 
 apply(dat,1,function(x) round(100*((max(x)/min(x))-1),2))
 apply(dat,1,function(x) round(100*((max(x)/quantile(x,0.75))-1),2))
@@ -132,4 +133,3 @@ apply(IQR_save,2,summary)
 s_skew
 s_kur
 c_rskew
-
