@@ -1,4 +1,3 @@
-
 # Updated Oracle simulation -----------------------------------------------
 
 #
@@ -20,7 +19,7 @@ for(j in 1:N){
   sc_fees <- 30*N_smart
   
   # New inputs
-  feed_input <- rnorm(n = N_feeds, mean = 1500, sd = 200)
+  feed_input <- rnorm(n = N_feeds, mean = 1500, sd = 20)
   
   # Initial deposit
   Initial_deposit <- deposits
@@ -29,7 +28,7 @@ for(j in 1:N){
   med <- median(feed_input)
   med_abd <- mad(feed_input)
   diff_sq <- (med - feed_input)^2
-  weight <- 1 - (diff_sq - min(diff_sq))/(max(diff_sq) - min(diff_sq))
+  weight <- (diff_sq - max(diff_sq))/(min(diff_sq) - max(diff_sq))*(1-0.2)+0.2
   
   # Test - coeff of var
   c_var_MAD <- 100*mad(feed_input)/median(feed_input)
@@ -38,7 +37,7 @@ for(j in 1:N){
   # Bootstrap MAD and apply tests
   bstraps <- c(rep(NA,10000))
   for(i in 1:10000){
-    samp <- sample(1:N_feeds,floor(0.6*N_feeds), replace = TRUE)
+    samp <- sample(1:N_feeds,floor(0.4*N_feeds), replace = TRUE)
     bsample <- feed_input[samp]
     bstraps[i] <- mad(bsample)
   }
@@ -56,21 +55,30 @@ for(j in 1:N){
     lowerMAD <- 1.4826 * hdmedian(deviations[x <= m])
     upperMAD <- 1.4826 * hdmedian(deviations[x >= m])
     
-    return(list("m"=m,"LM"=lowerMAD,"UM" = upperMAD,"Outliers" = ifelse(x >= m - 3*lowerMAD & x <= m + 3*upperMAD,1,0)))
+    return(list("m"=m,"LM"=lowerMAD,"UM" = upperMAD,"Outliers" = ifelse(x >= m - lowerMAD & x <= m + upperMAD,1,0)))
   }
   
   RO <- removeOutliers(feed_input)
   
   doub_mad <- RO$Outliers
   
+  for(i in 1:N_feeds){
+    # Penalty
+    if(feed_input[i] >= RO$m + 2*RO$UM | feed_input[i] <= RO$m - 2*RO$LM){
+      weight[i] <- 0
+    } else {
+      weight[i] <- weight[i]
+    }
+  }
+  
   Penalty <- c(rep(0,N_feeds))
   Reward <- c(rep(0,N_feeds))
   for(i in 1:N_feeds){
     # Penalty
-    if(feed_input[i] >= RO$m + 3*RO$UM | feed_input[i] <= RO$m - 3*RO$LM){
+    if(feed_input[i] >= RO$m + 2*RO$UM | feed_input[i] <= RO$m - 2*RO$LM){
       Penalty[i] <- 0.1*deposits[i]
     } else {
-      Penalty[i] = 0
+      Penalty[i] <- 0
     }
   }
   
@@ -101,3 +109,4 @@ for(j in 1:N){
                              ,"Coeff var SD" = rep(c_var_SD,N_feeds),"DoubMAD" =doub_mad,"Count0" = min_count)
   oracle_data <- do.call(rbind.data.frame, results)
 }
+rm(list=setdiff(ls(), "oracle_data"))
