@@ -1,0 +1,225 @@
+---
+title: "Oracle report"
+author: "Ahmed Ali"
+date: "16 November 2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This report will be taking a look into how an oracle can validate cryptocurrency prices only using data provided to it by feed providers. This report will not be delving into technical information around oracles but will present simulations and data analysis to inform on what indicators/algorithm an oracle can utilise to arrive at the "real" price at x time point. This is purely a data perspective on how to pick the best price.
+
+
+## A discussion on measures
+
+Since the Oracle can only act on what it recieves, it must assume that the real price is amongst the data provided. This will require the system to assess the inputs and choose a value possibly using some sort of data aggregation method. This presents a number of issues such as; what if malicious providers input wrong data on purpose, what about the price differences the cryptocurrency is trading at and which measure is best for performing such a task. 
+
+There are many ideas which can be explored as a solution. A solution would also have to take into consideration the behaviours of the area the data originates from. Using previous data as prior information would be useful in making sure there isn't any serious discrepencies between each aggregated data point but would be tricky due to the volatility commonly associated with cryptocurrencies. Another idea is analysing the common patterns of price distributions across exchanges and other feed providers to help inform the oracle with a set of tests it can use to critique the inputs. One other possible solution is weighting - this would help incentivise good data if done properly but if weights are calculated relative to other inputs at the same time point, this could prove to encourage the wrong incentive if the system can be gamed by malicious providers working together to input similar wrong data which would give them higher weights over low weights for good data.
+
+In general the median should be sufficient as a robust measure to extract the "correct" price and the median absolute deviance would help in analysing what the median deviation of exchanges from the median is. As the research in the following sections will show - both measures are pretty robust even when poor quality feed or malicious providers start sneaking in but remain a minority. This will be shown by an experiment where poor quality data is simulated and added into random feeds by random exchanges which will help in understanding the point at which the oracle should shut down or hand out large penalties. 
+
+## Economic incentives & Simulations
+A feed provider will need to be incentivised to provide good data and disincentivised to consider malpractice. Since decentralisation is the goal, deposits should not be too large which may discourage potential feed providers but also not too small which may possibly contribute to low quality feed. The deposit should demonstrate to individuals involved with a smart contract that the feed provider has enough to be punished in case they provide bad data. Hence the minimum deposit $d$ formula may have a relationship with parameters such as; total fees $f$ from smart contracts interested in the data at time point x, a penalty $p$ for malicious inputs and the total value $v$ circulating each day in the financial ecoystem.
+
+An implementation in R of a simple simulation of such an idea can be seen below. The assumptions are that; feed providers input are distributed with a uniform distribution, the weights are created using a min-max scaling were each input have a score between 0 and 1, low deposits are punished with the log of the total value locked which is assumed to be the sum of the deposits saved in the system and the deposits are distributed with a uniform distribution. The penalties and rewards are linked with a weighting system which derived from the feed provider's proximity to the median.
+
+
+```{r}
+set.seed(123)
+N <- 5 # Number of inputs for each exchange
+N_feeds <- 10 # Number of feed providers, can simulate random number of feeds if needed
+deposits <- runif(N_feeds,1000,30000) # Simulating initial deposits for each feed provider
+results <- list() # Final results will be stored in a list
+for(j in 1:N){
+  
+  # New inputs
+  feed_input <- runif(n = N_feeds, min = 1000, max = 1500)
+  
+  # Initial deposit
+  Initial_deposit <- deposits
+  
+  # Weighting
+  med <- median(feed_input)
+  med_abd <- mad(feed_input)
+  weight <- (med - feed_input)^2
+  weight_scaled <- 1 - (weight - min(weight))/(max(weight) - min(weight))
+  
+  for(i in 1:N_feeds){
+    TVL <- sum(deposits)
+    min_deposit <- 0.05*TVL
+  
+  # Punish low deposits
+  if(deposits[i] < min_deposit){
+    deposits[i] = deposits[i] - log(TVL)
+  }
+  
+  # Penalty
+  Penalty <- (1-weight_scaled)*0.01*deposits
+  
+  # Reward
+  Reward <- weight_scaled*0.1*deposits
+  
+  # Adjust deposit
+  deposits[i] <- deposits[i] + Reward[i] - Penalty[i]
+  
+  # Names 
+  Names <- paste0("Provider"," ",seq(1,N_feeds,1))
+  
+  }
+  # Store results
+  results[[j]] <- data.frame("Providers" = Names,"Feed input" = feed_input, "Median input" = rep(med,N_feeds)
+                             ,"MAD" = rep(med_abd,N_feeds)
+                             ,"Min Deposit" = rep(min_deposit,N_feeds), "Initial_deposit" = Initial_deposit
+                             ,"Final Deposit"= deposits
+                             ,"Weight"=weight_scaled,"Reward" = Reward,"Penalty" = Penalty)
+}
+library(tidyverse)
+library(knitr)
+kable(results[[1]], caption = "First iteration") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+
+At the first iteration we can see that each provider is assigned a weight depending on how far they are from median and each feed provider is assessed relative to what other feed providers submitted. Weights are calculated by squaring the difference between the inputs and the median and then scaling using the min-max scaling method. This can improved by scaling weights within 0.2 to 1 for instance and assigning weights of 0 to feed providers with malicious inputs. Currently a small penalty was given to feed provider 9 despite obtaining a very high weight - however their reward is the third highest and will offset the miniscule penalty. One further improvement that will be needed here will be the introduction of smart contract fees will be distributed amongst the feed providers rather than their reward being linked to their deposit.
+
+This is one method which can help in incentivising good data, disincentivising bad data and provide feed providers with a fair reward. However in such a system, suppose we obtain data which is extremely well behaved, a good provider may be punished simply because other good providers obtained data close to the median. This can be solved simply by not allowing the weights to be used in deciding rewards and penalties but instead using a set of tests which will be able to identify malicious feed providers. The weights calculated however do indicate good performers and bad performers relative to each other so its useage can be alongside a set of tests rather than being its own condition.
+
+
+We take a quick dive into the last iteration of the simulation below:
+
+```{r}
+kable(results[[5]], caption = "Last iteration")  %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+
+We can see from the final deposit that all providers have benefited from this system. A lot of providers are being penalised - this is a result of the values being simulated but also the stringent criterias for not being penalised. The squaring used in the calculation allows for more high weights to be distributed which would convince feed providers that this is an ethical and rewarding system. As we will show in following sections - values will be more aligned with each other than the simulated values seen here. In most cases the median will more than sufficient even for currencies such as bitcoin and bitcoin cash which suffer from a difference in prices at different exchanges.
+
+An improvement to the previous simulation can be seen below where smart contract fees are introduced, simulated using the binomial distribution, and revenue is collected from penalties and smart contract fees. A more complex version of the median absolute deviance is used here where the MAD of the values above the median are calculated and the MAD of the values below the median are calculated which provides more robust values to assess the data. Bootstrapping is utilised in order to subsample the data many times and calculate the number of times the MAD is 0. The higher this is, the more similar the feed data are with each other. We also introduce coefficients of variation such as MAD over median and standard deviation over the mean to look at the amount of dispersion around the point estimates.
+
+
+```{r}
+set.seed(123)
+N <- 10 # Time points
+N_feeds <- 10 # Number of feed providers, can simulate random number of feeds if needed
+deposits <- rnorm(N_feeds, mean = 10000, sd = 1000) # Simulating initial deposits for each feed provider
+results <- list() # Final results will be stored in a list
+for(j in 1:N){
+  
+  # Number of smart contracts pulling data
+  N_smart <- rbinom(1,1000,0.6)
+  
+  # Fees pool for iteration j
+  sc_fees <- 30*N_smart
+  
+  # New inputs
+  feed_input <- rnorm(n = N_feeds, mean = 1500, sd = 20)
+  
+  # Initial deposit
+  Initial_deposit <- deposits
+  
+  # Weighting
+  med <- median(feed_input)
+  med_abd <- mad(feed_input)
+  diff_sq <- (med - feed_input)^2
+  weight <- (diff_sq - max(diff_sq))/(min(diff_sq) - max(diff_sq))*(1-0.2)+0.2
+  
+  # Test - coeff of var
+  c_var_MAD <- 100*mad(feed_input)/median(feed_input)
+  c_var_SD <- 100*sd(feed_input)/mean(feed_input)
+  
+  # Bootstrap MAD and apply tests
+  bstraps <- c(rep(NA,10000))
+  for(i in 1:10000){
+    samp <- sample(1:N_feeds,floor(0.4*N_feeds), replace = TRUE)
+    bsample <- feed_input[samp]
+    bstraps[i] <- mad(bsample)
+  }
+  
+  min_count <- 100*sum(ifelse(bstraps == 0,1,0))/10000
+  
+  library(Hmisc)
+  
+  removeOutliers <- function(x) {
+    hdmedian <- function(u) as.numeric(hdquantile(u, 0.5))
+    
+    x <- x[!is.na(x)]
+    m <- hdmedian(x)
+    deviations <- abs(x - m)
+    lowerMAD <- 1.4826 * hdmedian(deviations[x <= m])
+    upperMAD <- 1.4826 * hdmedian(deviations[x >= m])
+    
+    return(list("m"=m,"LM"=lowerMAD,"UM" = upperMAD,"Outliers" = ifelse(x >= m - lowerMAD & x <= m + upperMAD,1,0)))
+  }
+  
+  RO <- removeOutliers(feed_input)
+  
+  doub_mad <- RO$Outliers
+  
+  for(i in 1:N_feeds){
+    # Penalty
+    if(feed_input[i] >= RO$m + 2*RO$UM | feed_input[i] <= RO$m - 2*RO$LM){
+      weight[i] <- 0
+    } else {
+      weight[i] <- weight[i]
+    }
+  }
+  
+  Penalty <- c(rep(0,N_feeds))
+  Reward <- c(rep(0,N_feeds))
+  for(i in 1:N_feeds){
+    # Penalty
+    if(feed_input[i] >= RO$m + 2*RO$UM | feed_input[i] <= RO$m - 2*RO$LM){
+      Penalty[i] <- 0.1*deposits[i]
+    } else {
+      Penalty[i] <- 0
+    }
+  }
+  
+  # Total penalty pool
+  pen_pool <- sum(Penalty)
+  
+  # Total revenue
+  revenue <- sum(pen_pool,sc_fees)
+  
+  for(i in 1:N_feeds){
+    # Reward
+    Reward[i] <- revenue * weight[i]/sum(weight)
+  }
+  
+  # Adjust deposit
+  deposits <- deposits + Reward - Penalty
+  
+  # Names 
+  Names <- paste0("Provider"," ",seq(1,N_feeds,1))
+  Rounds <- paste0("Round",j)
+  
+  # Store results
+  results[[j]] <- data.frame("Providers" = Names,"Feed input" = feed_input, "Median input" = rep(med,N_feeds)
+                             ,"MAD" = rep(med_abd,N_feeds), "Revenue" = rep(revenue,N_feeds)
+                             , "Initial deposit" = Initial_deposit
+                             ,"Final Deposit"= deposits
+                             ,"Weight"=weight,"Reward" = Reward,"Penalty" = Penalty,"Coeff var MAD" = rep(c_var_MAD,N_feeds)
+                             ,"Coeff var SD" = rep(c_var_SD,N_feeds),"DoubMAD" =doub_mad,"Count0" = min_count)
+  oracle_data <- do.call(rbind.data.frame, results)
+}
+kable(oracle_data[c(1:10),], caption = "First iteration")  %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+Here we can see a total revenue of $18060 collected from smart contract fees. No penalties have been collected and the observed MAD is very low. The coefficient of variation is also low and we see that 3.8% of MAD bootstrapped iterations are 0. The DoubMAD variable is a binary variable which indicates 0 if the value is outside the acceptable interval. Considering the data is quite well behaved, for simulated values, with a low MAD, the question of linking the punishment of feed providers with what their position is relative to the MAD interval arises. It will be interesting to gain a baseline level of understanding of how these values show themselves with different types of cryptocurrencies.
+
+
+```{r}
+kable(oracle_data[c(91:100),], caption = "Last iteration")  %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+In the last iteration above we observe for provider 7 that a penalty of 10% has been applied and a weight of 0 has been given. The provider has been flagged up alongside provider 9 however due to the fact that provider 9 has remained within the interval, they have not been punished but have the lowest weight available since the min-max scaling for this particular simulation exercise is between 0.2 and 1.
+
+It is important to understand how these different measures show each feed provider input which starts to paint a picture on what tests we will need to include into the final algorithm.
+
