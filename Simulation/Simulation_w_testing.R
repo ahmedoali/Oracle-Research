@@ -9,6 +9,7 @@ deposits <- rnorm(N_feeds, mean = 10000, sd = 1000) # Simulating initial deposit
 TVL <- 0 # Starting total value locked
 feed_spread <- 10 # Standard deviation of feed inputs
 min_dep <- 0 # Initialise minimum deposit
+acc_MAD <- 100 # Acceptable MAD for data
 results <- list() # Final results will be stored in a list
 library(utils)
 pb <- txtProgressBar(min = 0, max = N, initial = 0) 
@@ -21,14 +22,14 @@ for(j in 1:N){
   sc_fees <- 30*N_smart
   
   # Record if oracle tests ring alarm
-  oracle_test <-c(rep(0,60)) 
+  oracle_test <- c(rep(0,N_feeds)) 
   
   # Initial deposit
   Initial_deposit <- deposits
   
   # Test 1 - Deposit test
+  deposit_test <- c(rep(0,N_feeds))
   if(j > 1){
-    deposit_test <- c(rep(0,N_feeds))
     for(i in 1:N_feeds){
       if(feed_input[i] < min_dep){
         deposit_test[i] <- 1
@@ -46,7 +47,7 @@ for(j in 1:N){
   # Test 2 - MAD
   # MAD of inputs
   for(i in 1:N_feeds){
-    if(med_abd >= 100){
+    if(med_abd >= acc_MAD){
       MAD_test <- 1
     } else {
       MAD_test <- 0
@@ -78,7 +79,7 @@ for(j in 1:N){
   }
   
   # Punishment
-  if(MAD_test == 1 & var_test == 1){
+  if(MAD_test == 1 | var_test == 1){
     Reward <- c(rep(0,N_feeds))
     Penalty <- c(rep(0,N_feeds))
     print("Data can not be used due to high variability")
@@ -120,6 +121,21 @@ for(j in 1:N){
     TVL <- max(deposits) + revenue
     min_dep <- TVL/N_feeds
     
+    # Final aggregated choice
+    oracle_test <- deposit_test + c(rep(MAD_test,N_feeds)) 
+    + c(rep(var_test,N_feeds)) + std_test
+    
+    dat <- c(rep(NA,N_feeds))
+    for(i in 1:N_feeds){
+    if(oracle_test[i] <= 2){
+      dat[i] <- feed_input[i]
+    } else {
+      dat[i] <- 0
+    }
+    }
+    
+    agg_dat <- median(dat[dat > 0])
+    
     # Names 
     Names <- paste0("Provider"," ",seq(1,N_feeds,1))
     Rounds <- paste0("Round",j)
@@ -129,7 +145,7 @@ for(j in 1:N){
                                ,"MAD" = rep(med_abd,N_feeds),"TVL" = rep(TVL,N_feeds),"min_dep" = rep(min_dep,N_feeds) ,"Revenue" = rep(revenue,N_feeds)
                                , "Initial deposit" = Initial_deposit, "std_scores" = std_scores
                                ,"Final Deposit"= deposits,"Reward" = Reward,"Penalty" = Penalty,"Coeff var MAD" = rep(c_var_MAD,N_feeds)
-                               ,"Coeff var SD" = rep(c_var_SD,N_feeds))
+                               ,"Coeff var SD" = rep(c_var_SD,N_feeds),"Oracle_tests" = oracle_test ,"Oracle_data" = rep(agg_dat,N_feeds))
     oracle_data <- do.call(rbind.data.frame, results)
     setTxtProgressBar(pb,j)
   }
