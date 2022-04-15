@@ -1,5 +1,5 @@
 # Committee size simulation -----------------------------------------------
-
+rm(list = ls())
 
 # Read data ---------------------------------------------------------------
 
@@ -12,11 +12,11 @@ dat <- dat[,c(1,19)]
 
 # Simulation --------------------------------------------------------------
 
-N <- 1000000
+N_iter <- 1000000
 results <- list()
 library(utils)
-pb <- txtProgressBar(min = 0, max = N, initial = 0)
-for(j in 1:N){
+pb <- txtProgressBar(min = 0, max = N_iter, initial = 0)
+for(j in 1:N_iter){
     hash_max <- 2^512
     hash <- runif(nrow(dat), min = 0, max = hash_max)
     r <- hash/hash_max
@@ -61,14 +61,15 @@ dat_v3 <- setorder(dat_v2,ID)
 library(tidyverse)
 dat_v4 <- left_join(dat,rbindlist(results)[, sum(Rewards), by = ID], by = c("Unique_ID" = "ID"))
 
-N <- dat_v3 %>% 
+N_counts <- dat_v3 %>% 
     group_by(ID) %>% 
     count()
 
-dat_v5 <- left_join(dat_v4, N, by = c("Unique_ID" = "ID"))
+dat_v5 <- left_join(dat_v4, N_counts, by = c("Unique_ID" = "ID"))
 
 # Remove missing
 dat_v6 <- na.omit(dat_v5)
+colnames(dat_v6) <- c("ID","N_tokens","Rewards","N_counts")
 
 # Save dataframe
 library(openxlsx)
@@ -78,7 +79,7 @@ write.xlsx(dat_v6, 'results.xlsx')
 
 # Plot of N_tokens vs Rewards
 
-jpeg("rplot1.jpg", width = 350, height = 350)
+jpeg("rplot1.jpg", width = 700, height = 400)
 
 P <- ggplot(data = dat_v6, aes(x = N_tokens, y = Rewards)) + 
     geom_jitter(width = 0.5, height = 0.5)
@@ -92,7 +93,7 @@ dev.off()
 
 # Plot of N_tokens vs ROI
 
-jpeg("rplot2.jpg", width = 350, height = 350)
+jpeg("rplot2.jpg", width = 700, height = 400)
 
 dat_v6$ROI <- 100*dat_v6$Rewards/dat_v6$N_tokens
 head(dat_v6$ROI)
